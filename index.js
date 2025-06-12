@@ -45,13 +45,12 @@ client.on('messageCreate', async message => {
       new ButtonBuilder().setCustomId('Emo').setLabel('🟡 Emo').setStyle(ButtonStyle.Secondary)
     );
 
-    // Send the message
     const infoMessage = await message.channel.send({
       embeds: [embed],
       components: [row1, row2]
     });
 
-    const collector = infoMessage.createMessageComponentCollector({ time: 60000 });
+    const collector = infoMessage.createMessageComponentCollector(); // No timeout
 
     collector.on('collect', async interaction => {
       await interaction.deferUpdate();
@@ -75,16 +74,7 @@ client.on('messageCreate', async message => {
       });
     });
 
-    collector.on('end', async () => {
-      // Optionally disable all buttons when time runs out
-      const disabledRows = [row1, row2].map(row => {
-        return new ActionRowBuilder().addComponents(
-          row.components.map(button => ButtonBuilder.from(button).setDisabled(true))
-        );
-      });
-
-      await infoMessage.edit({ components: disabledRows });
-    });
+    // Removed collector.on('end') — buttons stay clickable until manually disabled
   }
 });
 
