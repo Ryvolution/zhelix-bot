@@ -1,15 +1,21 @@
 require('dotenv').config();
 console.log("Loaded token:", process.env.BOT_TOKEN ? "✓ Found" : "⛔ Not found");
 
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const {
+  Client,
+  GatewayIntentBits,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
+} = require('discord.js');
 
-// Set up the client with intents
+// Set up the client with necessary intents
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions
+    GatewayIntentBits.MessageContent
   ]
 });
 
@@ -22,25 +28,50 @@ client.on('messageCreate', async message => {
     const embed = new EmbedBuilder()
       .setColor(0x0099FF)
       .setTitle('Info Panel')
-      .setDescription('React to this message to change the info!');
+      .setDescription('Click a button below to get more info.');
 
-    const infoMessage = await message.channel.send({ embeds: [embed] });
+    // First row of 4 buttons
+    const row1 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('TT').setLabel('📘 Option 1').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('MT').setLabel('📗 Option 2').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('VoR').setLabel('📕 Option 3').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('TK').setLabel('📙 Option 4').setStyle(ButtonStyle.Primary)
+    );
 
-    // Add reactions
-    await infoMessage.react('📘');
-    await infoMessage.react('📗');
+    // Second row of 4 buttons
+    const row2 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('IAU').setLabel('🔵 Option 5').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('MLK').setLabel('🟢 Option 6').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('Seed').setLabel('🔴 Option 7').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('Emo').setLabel('🟡 Option 8').setStyle(ButtonStyle.Secondary)
+    );
 
-    // Create a reaction collector
-    const filter = (reaction, user) => !user.bot;
-    const collector = infoMessage.createReactionCollector({ filter, time: 60000 });
+    // Send message with embed and buttons
+    const infoMessage = await message.channel.send({
+      embeds: [embed],
+      components: [row1, row2]
+    });
 
-    collector.on('collect', (reaction, user) => {
-      if (reaction.emoji.name === '📘') {
-        embed.setDescription('You selected the **blue book**!');
-      } else if (reaction.emoji.name === '📗') {
-        embed.setDescription('You selected the **green book**!');
-      }
-      infoMessage.edit({ embeds: [embed] });
+    // Create interaction collector for 60 seconds
+    const collector = infoMessage.createMessageComponentCollector({ time: 60000 });
+
+    collector.on('collect', async interaction => {
+      await interaction.deferUpdate(); // Avoid "interaction failed" error
+
+      // Update embed with selected button info
+      embed.setDescription(`You clicked **${interaction.component.label}**.`);
+      await interaction.editReply({ embeds: [embed] });
+    });
+
+    collector.on('end', async () => {
+      // Optionally disable buttons after 60 seconds
+      const disabledRows = [row1, row2].map(row => {
+        return new ActionRowBuilder().addComponents(
+          row.components.map(button => ButtonBuilder.from(button).setDisabled(true))
+        );
+      });
+
+      await infoMessage.edit({ components: disabledRows });
     });
   }
 });
